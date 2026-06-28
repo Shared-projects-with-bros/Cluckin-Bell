@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cluckin Bell | Reservas</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navegacion principal">
+      <a class="brand" href="index.html"><img src="img/Cluckin bell.png" alt="Logo de Cluckin Bell"><span>Cluckin Bell</span></a>
+      <button class="menu-toggle" type="button" aria-label="Abrir menu" aria-expanded="false"><span></span><span></span><span></span></button>
+      <ul class="nav-links">
+        <li><a href="index.html">Inicio</a></li>
+        <li><a href="menu.html">Menu</a></li>
+        <li><a href="favoritos.html">Favoritos</a></li>
+        <li><a href="promos.html">Promos</a></li>
+        <li><a href="reservas.html" aria-current="page">Reservas</a></li>
+        <li><a href="contacto.html">Contacto</a></li>
+      </ul>
+      <a class="cart-link" href="carrito.html">Carrito <span class="cart-count">0</span></a>
+    </nav>
+  </header>
+  <main class="page-shell">
+    <section class="section page-title">
+      <p class="eyebrow">Reservas</p>
+      <h1>Reserva tu mesa</h1>
+      <p>Formulario base para una siguiente historia del proyecto.</p>
+    </section>
+    <section class="section section-tight">
+      <form class="reservation-form" id="reservationForm">
+        <label>Nombre<input type="text" name="name" placeholder="Tu nombre" required></label>
+        <label>Telefono<input type="tel" name="phone" placeholder="8888-8888" required></label>
+        <label>Personas<input type="number" name="people" min="1" max="12" value="2" required></label>
+        <label>Fecha<input type="date" name="date" required></label>
+        <button class="btn primary" type="submit">Enviar reserva</button>
+        <p class="form-message" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <footer class="site-footer"><strong>Cluckin Bell</strong><span>Te esperamos con pollo recien hecho.</span></footer>
+  <script src="js/app.js"></script>
+</body>
+</html>
