@@ -238,6 +238,35 @@ function setupNavigation() {
   });
 }
 
+function normalizeText(text) {
+  return text
+    .toString()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function setupMenuSearch() {
+  const input = document.querySelector("#menuSearchInput");
+  const status = document.querySelector("#menuSearchStatus");
+  if (!input) return;
+
+  input.addEventListener("input", () => {
+    const query = normalizeText(input.value);
+    const results = query
+      ? menu.filter((product) => normalizeText(product.nombre).includes(query))
+      : menu;
+
+    renderProducts("#contenedor-menu", results);
+
+    if (!status) return;
+    status.textContent = query && results.length === 0
+      ? `No se encontraron productos para "${input.value.trim()}".`
+      : "";
+  });
+}
+
 function setupReservation() {
   const reservationForm = document.querySelector("#reservationForm");
   const formMessage = document.querySelector(".form-message");
@@ -290,6 +319,7 @@ document.addEventListener("keydown", (event) => {
 
 setupNavigation();
 setupReservation();
+setupMenuSearch();
 renderProducts("#contenedor-menu", menu);
 renderProducts("#favoritos-lista", menu.filter((product) => product.favorito));
 renderDetailPage();

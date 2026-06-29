@@ -38,6 +38,11 @@
     </section>
 
     <section class="section section-tight">
+      <form class="search-bar" role="search" autocomplete="off" onsubmit="return false;">
+        <label class="sr-only" for="menuSearchInput">Buscar productos del menu</label>
+        <input type="search" id="menuSearchInput" placeholder="Buscar por nombre, ej. Oreja de Pollo" aria-label="Buscar productos del menu">
+      </form>
+      <p id="menuSearchStatus" class="search-status" aria-live="polite"></p>
       <div id="contenedor-menu" class="product-grid" aria-live="polite"></div>
     </section>
   </main>
