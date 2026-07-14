@@ -27,6 +27,9 @@
       <a class="cart-link" href="carrito.html" aria-current="page" aria-label="Ver carrito">
         Carrito <span class="cart-count">0</span>
       </a>
+      <a class="cart-link" href="pedidos.html" aria-label="Ver pedidos pendientes">
+        Pedidos Pendientes <span class="cart-count orders-count">0</span>
+      </a>
     </nav>
   </header>
 
@@ -34,7 +37,7 @@
     <section class="section page-title">
       <p class="eyebrow">Pedido</p>
       <h1>Carrito</h1>
-      <p>Revisa los productos seleccionados antes de continuar.</p>
+      <p>Revisa los productos seleccionados, ajusta la cantidad y confirma tu pedido.</p>
     </section>
     <section class="section section-tight cart-layout">
       <div id="carrito-lista" class="cart-list"></div>
@@ -42,10 +45,27 @@
         <h2>Resumen</h2>
         <p>Total</p>
         <strong id="carrito-total">$0.00</strong>
-        <button class="btn primary" type="button">Finalizar pedido</button>
+        <button class="btn primary" type="button" id="btnFinalizarPedido">Finalizar pedido</button>
+        <p class="form-message" id="carritoMensaje" role="status" aria-live="polite"></p>
       </aside>
     </section>
   </main>
+
+  <div class="modal" id="checkoutModal" aria-hidden="true">
+    <div class="modal-dialog checkout-dialog" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
+      <button class="modal-close" type="button" data-close-modal aria-label="Cerrar formulario de pedido">x</button>
+      <div>
+        <p class="eyebrow">HU6 - Confirmar pedido</p>
+        <h2 id="checkoutTitle">Datos de entrega</h2>
+        <form class="reservation-form checkout-form" id="checkoutForm">
+          <label>Nombre<input type="text" name="nombre" placeholder="Tu nombre" required></label>
+          <label>Telefono<input type="tel" name="telefono" placeholder="8888-8888" required></label>
+          <label class="full-field">Direccion de entrega<input type="text" name="direccion" placeholder="Direccion completa" required></label>
+          <button class="btn primary full-field" type="submit">Confirmar pedido</button>
+        </form>
+      </div>
+    </div>
+  </div>
 
   <footer class="site-footer">
     <strong>Cluckin Bell</strong>

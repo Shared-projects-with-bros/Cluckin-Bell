@@ -108,6 +108,12 @@ img {
   border: 2px solid var(--yellow);
   border-radius: 8px;
   font-weight: 900;
+  white-space: nowrap;
+}
+
+.cart-link[aria-current="page"] {
+  background: var(--yellow);
+  color: var(--ink);
 }
 
 .cart-count {
@@ -119,6 +125,11 @@ img {
   background: var(--yellow);
   color: var(--ink);
   font-size: 0.85rem;
+}
+
+.cart-link[aria-current="page"] .cart-count {
+  background: var(--ink);
+  color: var(--yellow);
 }
 
 .menu-toggle {
@@ -242,6 +253,11 @@ img {
   color: var(--white);
 }
 
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .section {
   padding: 70px 0;
 }
@@ -279,7 +295,8 @@ img {
 .promo-card,
 .cart-summary,
 .cart-item,
-.reservation-form {
+.reservation-form,
+.order-card {
   border: 3px solid var(--ink);
   border-radius: 8px;
   background: var(--paper);
@@ -417,6 +434,8 @@ img {
   border-radius: 8px;
   background: var(--paper);
   box-shadow: var(--shadow);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
 }
 
 .modal-dialog img {
@@ -428,6 +447,20 @@ img {
   background: var(--white);
   border-radius: 8px;
   padding: 12px;
+}
+
+/* Modal de checkout (HU6): no lleva imagen, una sola columna */
+.checkout-dialog {
+  grid-template-columns: 1fr;
+  width: min(560px, 100%);
+}
+
+.checkout-form {
+  margin-top: 12px;
+}
+
+.full-field {
+  grid-column: 1 / -1;
 }
 
 .modal-close {
@@ -506,6 +539,20 @@ img {
   background: var(--white);
 }
 
+.cart-item-info h3 {
+  margin: 0 0 8px;
+}
+
+.cart-item-info .price {
+  margin: 6px 0 0;
+  font-size: 1.15rem;
+}
+
+/* Control de cantidad dentro del carrito (HU5) */
+.cart-quantity {
+  margin: 6px 0;
+}
+
 .cart-summary {
   padding: 22px;
   position: sticky;
@@ -517,6 +564,10 @@ img {
   margin: 8px 0 18px;
   color: var(--red);
   font-size: 2rem;
+}
+
+.cart-summary .btn {
+  width: 100%;
 }
 
 .empty-state {
@@ -580,10 +631,60 @@ img {
 }
 
 .form-message {
-  margin: 0;
+  margin: 12px 0 0;
   align-self: center;
   color: var(--red);
   font-weight: 900;
+}
+
+/* Pedidos pendientes (HU6) */
+.orders-grid {
+  display: grid;
+  gap: 18px;
+}
+
+.order-card {
+  padding: 22px;
+}
+
+.order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.order-status {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--orange);
+  color: var(--white);
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 0.8rem;
+}
+
+.order-date {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.order-items {
+  margin: 0 0 14px;
+  padding-left: 18px;
+  color: var(--ink);
+  line-height: 1.7;
+}
+
+.order-client {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-weight: 700;
 }
 
 .site-footer {

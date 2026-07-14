@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cluckin Bell | Detalle de producto</title>
+  <title>Cluckin Bell | Pedidos Pendientes</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
-<body data-page="detalle">
+<body data-page="pedidos">
   <header class="site-header">
     <nav class="navbar" aria-label="Navegacion principal">
       <a class="brand" href="index.html">
@@ -27,19 +27,26 @@
       <a class="cart-link" href="carrito.html" aria-label="Ver carrito">
         Carrito <span class="cart-count">0</span>
       </a>
-      <a class="cart-link" href="pedidos.html" aria-label="Ver pedidos pendientes">
+      <a class="cart-link" href="pedidos.html" aria-current="page" aria-label="Ver pedidos pendientes">
         Pedidos Pendientes <span class="cart-count orders-count">0</span>
       </a>
     </nav>
   </header>
 
   <main class="page-shell">
-    <section class="section detail-layout" id="detalle-producto"></section>
+    <section class="section page-title">
+      <p class="eyebrow">HU6</p>
+      <h1>Pedidos Pendientes</h1>
+      <p>Aqui aparecen los pedidos confirmados con su codigo de seguimiento de 6 digitos.</p>
+    </section>
+    <section class="section section-tight">
+      <div id="pedidos-lista" class="orders-grid"></div>
+    </section>
   </main>
 
   <footer class="site-footer">
     <strong>Cluckin Bell</strong>
-    <span>Detalle completo para decidir tu pedido.</span>
+    <span>Guarda tu codigo para consultar el estado de tu pedido.</span>
   </footer>
 
   <script src="js/app.js"></script>

@@ -22,7 +22,7 @@ const menu = [
     nombre: "DinoRico",
     precio: 99.99,
     descripcion: "Para los que gustan de algo prehistorico.",
-    ingredientes: "Compy entero, una cuchara de sal volcanica, Jugo de limon de la era de hielo, huevo de giganoto, aceite de pablo, LA CEBOLLA", 
+    ingredientes: "Compy entero, una cuchara de sal volcanica, Jugo de limon de la era de hielo, huevo de giganoto, aceite de pablo, LA CEBOLLA",
     img: "img/Dinorico.png",
     favorito: true
   },
@@ -60,8 +60,28 @@ const money = new Intl.NumberFormat("en-US", {
   currency: "USD"
 });
 
-const getCart = () => JSON.parse(localStorage.getItem("cluckinCart")) || [];
-const setCart = (cart) => localStorage.setItem("cluckinCart", JSON.stringify(cart));
+const CART_KEY = "cluckinCart";
+const ORDERS_KEY = "cluckinOrders";
+
+/* ---------- Carrito (almacenamiento) ---------- */
+
+const getCart = () => JSON.parse(localStorage.getItem(CART_KEY)) || [];
+const setCart = (cart) => localStorage.setItem(CART_KEY, JSON.stringify(cart));
+
+/* ---------- Pedidos pendientes (almacenamiento) ---------- */
+
+const getOrders = () => JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
+const setOrders = (orders) => localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+
+function generateOrderCode(existingCodes) {
+  let code;
+  do {
+    code = String(Math.floor(100000 + Math.random() * 900000));
+  } while (existingCodes.includes(code));
+  return code;
+}
+
+/* ---------- Contadores del navbar ---------- */
 
 function updateCartCount() {
   const totalItems = getCart().reduce((total, item) => total + item.cantidad, 0);
@@ -70,10 +90,19 @@ function updateCartCount() {
   });
 }
 
+function updateOrdersCount() {
+  const totalOrders = getOrders().length;
+  document.querySelectorAll(".orders-count").forEach((counter) => {
+    counter.textContent = totalOrders;
+  });
+}
+
+/* ---------- HU4: Agregar productos al carrito ---------- */
+
 function addToCart(productId, quantity = 1) {
   const cart = getCart();
   const current = cart.find((item) => item.id === productId);
-  const safeQuantity = Math.max(1, Number(quantity) || 1);
+  const safeQuantity = Math.max(1, Math.floor(Number(quantity)) || 1);
 
   if (current) {
     current.cantidad += safeQuantity;
@@ -83,7 +112,37 @@ function addToCart(productId, quantity = 1) {
 
   setCart(cart);
   updateCartCount();
+  renderCart();
 }
+
+/* ---------- HU5: Gestionar carrito de compras ---------- */
+
+function updateCartQuantity(productId, quantity) {
+  const cart = getCart();
+  const item = cart.find((entry) => entry.id === productId);
+  if (!item) return;
+
+  const safeQuantity = Math.max(0, Math.floor(Number(quantity)) || 0);
+
+  if (safeQuantity <= 0) {
+    setCart(cart.filter((entry) => entry.id !== productId));
+  } else {
+    item.cantidad = safeQuantity;
+    setCart(cart);
+  }
+
+  updateCartCount();
+  renderCart();
+}
+
+function removeFromCart(productId) {
+  const cart = getCart().filter((item) => item.id !== productId);
+  setCart(cart);
+  updateCartCount();
+  renderCart();
+}
+
+/* ---------- Tarjetas de producto (menu / favoritos) ---------- */
 
 function productCard(product) {
   return `
@@ -116,6 +175,8 @@ function renderProducts(containerId, products) {
   container.innerHTML = products.map(productCard).join("");
 }
 
+/* ---------- Modal de detalle rapido (HU2) ---------- */
+
 function openProductModal(productId) {
   const product = menu.find((item) => item.id === productId);
   const modal = document.querySelector("#productModal");
@@ -136,12 +197,14 @@ function openProductModal(productId) {
   modal.setAttribute("aria-hidden", "false");
 }
 
-function closeProductModal() {
-  const modal = document.querySelector("#productModal");
-  if (!modal) return;
-  modal.classList.remove("is-open");
-  modal.setAttribute("aria-hidden", "true");
+function closeModals() {
+  document.querySelectorAll(".modal.is-open").forEach((modal) => {
+    modal.classList.remove("is-open");
+    modal.setAttribute("aria-hidden", "true");
+  });
 }
+
+/* ---------- Pagina de detalle completo ---------- */
 
 function renderDetailPage() {
   const detail = document.querySelector("#detalle-producto");
@@ -178,6 +241,8 @@ function renderDetailPage() {
   `;
 }
 
+/* ---------- Carrito (pagina) ---------- */
+
 function renderCart() {
   const list = document.querySelector("#carrito-lista");
   const total = document.querySelector("#carrito-total");
@@ -199,10 +264,13 @@ function renderCart() {
     return `
       <article class="cart-item">
         <img src="${product.img}" alt="${product.nombre}">
-        <div>
+        <div class="cart-item-info">
           <h3>${product.nombre}</h3>
-          <p>${item.cantidad} x ${money.format(product.precio)}</p>
-          <strong>${money.format(subtotal)}</strong>
+          <label class="quantity-control cart-quantity">
+            <span>Cantidad</span>
+            <input type="number" min="1" max="20" value="${item.cantidad}" data-cart-quantity-for="${product.id}" aria-label="Cantidad de ${product.nombre} en el carrito">
+          </label>
+          <strong class="price">${money.format(subtotal)}</strong>
         </div>
         <button class="btn secondary" type="button" data-remove-cart="${product.id}">Quitar</button>
       </article>
@@ -212,12 +280,114 @@ function renderCart() {
   total.textContent = money.format(cartTotal);
 }
 
-function removeFromCart(productId) {
-  const cart = getCart().filter((item) => item.id !== productId);
-  setCart(cart);
-  updateCartCount();
-  renderCart();
+/* ---------- HU6: Realizar pedido (checkout) ---------- */
+
+function openCheckoutModal() {
+  const modal = document.querySelector("#checkoutModal");
+  if (!modal) return;
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
 }
+
+function setupCheckout() {
+  const checkoutForm = document.querySelector("#checkoutForm");
+  if (!checkoutForm) return;
+
+  checkoutForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    const cart = getCart();
+    const cartMessage = document.querySelector("#carritoMensaje");
+
+    if (cart.length === 0) {
+      closeModals();
+      return;
+    }
+
+    const formData = new FormData(checkoutForm);
+    const nombre = formData.get("nombre").toString().trim();
+    const telefono = formData.get("telefono").toString().trim();
+    const direccion = formData.get("direccion").toString().trim();
+
+    const items = cart.map((item) => {
+      const product = menu.find((menuItem) => menuItem.id === item.id);
+      return {
+        id: item.id,
+        nombre: product ? product.nombre : "Producto",
+        cantidad: item.cantidad,
+        precio: product ? product.precio : 0
+      };
+    });
+
+    const total = items.reduce((sum, item) => sum + item.precio * item.cantidad, 0);
+    const orders = getOrders();
+    const codigo = generateOrderCode(orders.map((order) => order.codigo));
+
+    const order = {
+      codigo,
+      fecha: new Date().toISOString(),
+      cliente: { nombre, telefono, direccion },
+      items,
+      total,
+      estado: "Pendiente"
+    };
+
+    orders.unshift(order);
+    setOrders(orders);
+    updateOrdersCount();
+
+    setCart([]);
+    updateCartCount();
+    renderCart();
+
+    checkoutForm.reset();
+    closeModals();
+
+    if (cartMessage) {
+      cartMessage.textContent = `Pedido confirmado. Tu codigo de seguimiento es ${codigo}. Puedes verlo en "Pedidos Pendientes".`;
+    }
+  });
+}
+
+/* ---------- Pagina de pedidos pendientes ---------- */
+
+function renderOrders() {
+  const container = document.querySelector("#pedidos-lista");
+  if (!container) return;
+
+  const orders = getOrders();
+
+  if (orders.length === 0) {
+    container.innerHTML = `<p class="empty-state">Aun no tienes pedidos pendientes. Finaliza una compra desde el carrito para generar un codigo.</p>`;
+    return;
+  }
+
+  container.innerHTML = orders.map((order) => {
+    const itemsList = order.items
+      .map((item) => `<li>${item.cantidad} x ${item.nombre} - ${money.format(item.precio * item.cantidad)}</li>`)
+      .join("");
+
+    const fecha = new Date(order.fecha).toLocaleString("es-CR", {
+      dateStyle: "medium",
+      timeStyle: "short"
+    });
+
+    return `
+      <article class="order-card">
+        <div class="order-head">
+          <span class="tag">#${order.codigo}</span>
+          <span class="order-status">${order.estado}</span>
+        </div>
+        <p class="order-date">${fecha}</p>
+        <p class="order-client">${order.cliente.nombre} · ${order.cliente.telefono} · ${order.cliente.direccion}</p>
+        <ul class="order-items">${itemsList}</ul>
+        <strong class="price">${money.format(order.total)}</strong>
+      </article>
+    `;
+  }).join("");
+}
+
+/* ---------- Utilidades varias ---------- */
 
 function getSelectedQuantity(addButton) {
   const productId = addButton.dataset.addCart;
@@ -269,8 +439,8 @@ function setupMenuSearch() {
 
 function setupReservation() {
   const reservationForm = document.querySelector("#reservationForm");
-  const formMessage = document.querySelector(".form-message");
-  if (!reservationForm || !formMessage) return;
+  if (!reservationForm) return;
+  const formMessage = reservationForm.querySelector(".form-message");
 
   reservationForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -278,16 +448,21 @@ function setupReservation() {
     const name = formData.get("name").toString().trim();
     const people = formData.get("people");
     const date = formData.get("date");
-    formMessage.textContent = `Gracias, ${name}. Tu reserva para ${people} personas queda solicitada para el ${date}.`;
+    if (formMessage) {
+      formMessage.textContent = `Gracias, ${name}. Tu reserva para ${people} personas queda solicitada para el ${date}.`;
+    }
     reservationForm.reset();
   });
 }
+
+/* ---------- Eventos globales ---------- */
 
 document.addEventListener("click", (event) => {
   const openButton = event.target.closest("[data-open-product]");
   const addButton = event.target.closest("[data-add-cart]");
   const removeButton = event.target.closest("[data-remove-cart]");
   const closeButton = event.target.closest("[data-close-modal]");
+  const finalizeButton = event.target.closest("#btnFinalizarPedido");
 
   if (openButton) {
     openProductModal(Number(openButton.dataset.openProduct));
@@ -306,22 +481,51 @@ document.addEventListener("click", (event) => {
     removeFromCart(Number(removeButton.dataset.removeCart));
   }
 
-  if (closeButton || event.target.id === "productModal") {
-    closeProductModal();
+  if (finalizeButton) {
+    const cart = getCart();
+    const cartMessage = document.querySelector("#carritoMensaje");
+
+    if (cart.length === 0) {
+      if (cartMessage) {
+        cartMessage.textContent = "Agrega al menos un producto antes de finalizar el pedido.";
+      }
+      return;
+    }
+
+    if (cartMessage) {
+      cartMessage.textContent = "";
+    }
+    openCheckoutModal();
+  }
+
+  if (closeButton || event.target.classList.contains("modal")) {
+    closeModals();
+  }
+});
+
+document.addEventListener("change", (event) => {
+  const cartQuantityInput = event.target.closest("[data-cart-quantity-for]");
+  if (cartQuantityInput) {
+    updateCartQuantity(Number(cartQuantityInput.dataset.cartQuantityFor), cartQuantityInput.value);
   }
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeProductModal();
+    closeModals();
   }
 });
+
+/* ---------- Inicializacion ---------- */
 
 setupNavigation();
 setupReservation();
 setupMenuSearch();
+setupCheckout();
 renderProducts("#contenedor-menu", menu);
 renderProducts("#favoritos-lista", menu.filter((product) => product.favorito));
 renderDetailPage();
 renderCart();
+renderOrders();
 updateCartCount();
+updateOrdersCount();
