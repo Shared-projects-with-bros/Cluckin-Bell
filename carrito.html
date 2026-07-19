@@ -28,7 +28,7 @@
         Carrito <span class="cart-count">0</span>
       </a>
       <a class="cart-link" href="pedidos.html" aria-label="Ver pedidos pendientes">
-        Pedidos Pendientes <span class="cart-count orders-count">0</span>
+        Pedidos Pendientes <span class="orders-count">0</span>
       </a>
     </nav>
   </header>
@@ -55,8 +55,9 @@
     <div class="modal-dialog checkout-dialog" role="dialog" aria-modal="true" aria-labelledby="checkoutTitle">
       <button class="modal-close" type="button" data-close-modal aria-label="Cerrar formulario de pedido">x</button>
       <div>
-        <p class="eyebrow">HU6 - Confirmar pedido</p>
+        <p class="eyebrow">Confirmar pedido</p>
         <h2 id="checkoutTitle">Datos de entrega</h2>
+        <div class="checkout-summary" id="checkoutSummary"></div>
         <form class="reservation-form checkout-form" id="checkoutForm">
           <label>Nombre<input type="text" name="nombre" placeholder="Tu nombre" required></label>
           <label>Telefono<input type="tel" name="telefono" placeholder="8888-8888" required></label>

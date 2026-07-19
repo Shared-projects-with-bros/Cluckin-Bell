@@ -73,6 +73,24 @@ const setCart = (cart) => localStorage.setItem(CART_KEY, JSON.stringify(cart));
 const getOrders = () => JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
 const setOrders = (orders) => localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
 
+/* ---------- Cuentas de usuario (almacenamiento) ---------- */
+
+const USERS_KEY = "cluckinUsers";
+const SESSION_KEY = "cluckinSession";
+
+const getUsers = () => JSON.parse(localStorage.getItem(USERS_KEY)) || [];
+const setUsers = (users) => localStorage.setItem(USERS_KEY, JSON.stringify(users));
+const getSession = () => JSON.parse(localStorage.getItem(SESSION_KEY)) || null;
+const setSession = (session) => {
+  if (session) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  } else {
+    localStorage.removeItem(SESSION_KEY);
+  }
+};
+
+let pendingCartAction = null;
+
 function generateOrderCode(existingCodes) {
   let code;
   do {
@@ -159,11 +177,13 @@ function productCard(product) {
       </button>
       <div class="card-actions">
         <a class="btn secondary" href="detalle_producto.html?id=${product.id}">Ver detalle</a>
-        <label class="quantity-control">
-          <span>Cantidad</span>
-          <input type="number" min="1" max="20" value="1" data-quantity-for="${product.id}" aria-label="Cantidad de ${product.nombre}">
-        </label>
-        <button class="btn primary" type="button" data-add-cart="${product.id}">Agregar al carrito</button>
+        <div class="qty-add-row">
+          <label class="quantity-control compact">
+            <span class="sr-only">Cantidad</span>
+            <input type="number" min="1" max="20" value="1" data-quantity-for="${product.id}" aria-label="Cantidad de ${product.nombre}">
+          </label>
+          <button class="btn primary" type="button" data-add-cart="${product.id}">Agregar al carrito</button>
+        </div>
       </div>
     </article>
   `;
@@ -224,17 +244,19 @@ function renderDetailPage() {
       <img src="${product.img}" alt="${product.nombre}">
     </div>
     <div class="detail-copy">
-      <p class="eyebrow">HU2 - Detalle del producto</p>
+      <p class="eyebrow">Detalle del producto</p>
       <h1>${product.nombre}</h1>
       <p>${product.descripcion}</p>
       <p class="ingredients">Ingredientes: ${product.ingredientes}</p>
       <strong class="price">${money.format(product.precio)}</strong>
-      <label class="quantity-control detail-quantity">
-        <span>Cantidad</span>
-        <input type="number" min="1" max="20" value="1" data-quantity-for="${product.id}" aria-label="Cantidad de ${product.nombre}">
-      </label>
       <div class="detail-actions">
         <a class="btn secondary" href="menu.html">Volver al menu</a>
+      </div>
+      <div class="qty-add-row detail-quantity">
+        <label class="quantity-control compact">
+          <span class="sr-only">Cantidad</span>
+          <input type="number" min="1" max="20" value="1" data-quantity-for="${product.id}" aria-label="Cantidad de ${product.nombre}">
+        </label>
         <button class="btn primary" type="button" data-add-cart="${product.id}">Agregar al carrito</button>
       </div>
     </div>
@@ -282,9 +304,35 @@ function renderCart() {
 
 /* ---------- HU6: Realizar pedido (checkout) ---------- */
 
+function renderCheckoutSummary() {
+  const container = document.querySelector("#checkoutSummary");
+  if (!container) return;
+
+  const items = getCart()
+    .map((item) => {
+      const product = menu.find((menuItem) => menuItem.id === item.id);
+      if (!product) return null;
+      return { nombre: product.nombre, cantidad: item.cantidad, subtotal: product.precio * item.cantidad };
+    })
+    .filter(Boolean);
+
+  const total = items.reduce((sum, item) => sum + item.subtotal, 0);
+
+  container.innerHTML = `
+    <ul class="checkout-summary-list">
+      ${items.map((item) => `<li><span>${item.cantidad} x ${item.nombre}</span><span>${money.format(item.subtotal)}</span></li>`).join("")}
+    </ul>
+    <div class="checkout-summary-total">
+      <span>Total</span>
+      <strong>${money.format(total)}</strong>
+    </div>
+  `;
+}
+
 function openCheckoutModal() {
   const modal = document.querySelector("#checkoutModal");
   if (!modal) return;
+  renderCheckoutSummary();
   modal.classList.add("is-open");
   modal.setAttribute("aria-hidden", "false");
 }
@@ -387,6 +435,190 @@ function renderOrders() {
   }).join("");
 }
 
+/* ---------- Cuenta de usuario (HU8/HU9): widget e inicio de sesion ---------- */
+
+function injectAccountUI() {
+  const nav = document.querySelector(".navbar");
+  if (nav && !document.querySelector("#accountWidget")) {
+    const widget = document.createElement("div");
+    widget.className = "account-widget";
+    widget.id = "accountWidget";
+    widget.innerHTML = `
+      <button class="account-trigger" id="accountTrigger" type="button" aria-haspopup="true" aria-expanded="false">Iniciar sesion</button>
+      <div class="account-menu" id="accountMenu" hidden></div>
+    `;
+    nav.appendChild(widget);
+  }
+
+  if (!document.querySelector("#authModal")) {
+    const modal = document.createElement("div");
+    modal.className = "modal";
+    modal.id = "authModal";
+    modal.setAttribute("aria-hidden", "true");
+    modal.innerHTML = `
+      <div class="modal-dialog auth-dialog" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+        <button class="modal-close" type="button" data-close-modal aria-label="Cerrar formulario de cuenta">x</button>
+        <div>
+          <p class="eyebrow" id="authTitle">Mi cuenta</p>
+          <p class="form-message auth-notice" id="authNotice"></p>
+          <div class="auth-tabs">
+            <button type="button" class="auth-tab is-active" data-auth-tab="login">Iniciar sesion</button>
+            <button type="button" class="auth-tab" data-auth-tab="register">Crear cuenta</button>
+          </div>
+          <form class="reservation-form auth-form" id="loginForm">
+            <label class="full-field">Correo<input type="email" name="correo" placeholder="tu@correo.com" required></label>
+            <label class="full-field">Contrasena<input type="password" name="password" required></label>
+            <button class="btn primary full-field" type="submit">Entrar</button>
+            <p class="form-message full-field" id="loginMessage" role="status" aria-live="polite"></p>
+          </form>
+          <form class="reservation-form auth-form" id="registerForm" hidden>
+            <label class="full-field">Nombre<input type="text" name="nombre" placeholder="Tu nombre" required></label>
+            <label class="full-field">Correo<input type="email" name="correo" placeholder="tu@correo.com" required></label>
+            <label class="full-field">Contrasena<input type="password" name="password" minlength="4" required></label>
+            <button class="btn primary full-field" type="submit">Crear cuenta</button>
+            <p class="form-message full-field" id="registerMessage" role="status" aria-live="polite"></p>
+          </form>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+  }
+}
+
+function updateNavVisibility() {
+  const session = getSession();
+  document
+    .querySelectorAll('a.cart-link[href="carrito.html"], a.cart-link[href="pedidos.html"]')
+    .forEach((link) => {
+      link.hidden = !session;
+    });
+}
+
+function renderAccountWidget() {
+  const trigger = document.querySelector("#accountTrigger");
+  const menu = document.querySelector("#accountMenu");
+  if (!trigger || !menu) return;
+
+  const session = getSession();
+  updateNavVisibility();
+
+  if (session) {
+    trigger.textContent = session.nombre.split(" ")[0];
+    trigger.classList.add("is-logged");
+    menu.innerHTML = `
+      <span class="account-menu-name">${session.nombre}</span>
+      <a href="pedidos.html">Ver pedidos pendientes</a>
+      <button type="button" id="logoutBtn">Cerrar sesion</button>
+    `;
+  } else {
+    trigger.textContent = "Iniciar sesion";
+    trigger.classList.remove("is-logged");
+    menu.innerHTML = "";
+    menu.hidden = true;
+    trigger.setAttribute("aria-expanded", "false");
+  }
+}
+
+function switchAuthTab(tab) {
+  const loginForm = document.querySelector("#loginForm");
+  const registerForm = document.querySelector("#registerForm");
+  if (!loginForm || !registerForm) return;
+
+  document.querySelectorAll("[data-auth-tab]").forEach((tabButton) => {
+    tabButton.classList.toggle("is-active", tabButton.dataset.authTab === tab);
+  });
+
+  loginForm.hidden = tab !== "login";
+  registerForm.hidden = tab !== "register";
+}
+
+function openAuthModal(tab, notice) {
+  const modal = document.querySelector("#authModal");
+  if (!modal) return;
+  switchAuthTab(tab || "login");
+  const noticeEl = document.querySelector("#authNotice");
+  if (noticeEl) noticeEl.textContent = notice || "";
+  modal.classList.add("is-open");
+  modal.setAttribute("aria-hidden", "false");
+}
+
+function closeAccountMenu() {
+  const menu = document.querySelector("#accountMenu");
+  const trigger = document.querySelector("#accountTrigger");
+  if (menu) menu.hidden = true;
+  if (trigger) trigger.setAttribute("aria-expanded", "false");
+}
+
+function toggleAccountMenu() {
+  const menu = document.querySelector("#accountMenu");
+  const trigger = document.querySelector("#accountTrigger");
+  if (!menu || !trigger) return;
+  const willOpen = menu.hidden;
+  menu.hidden = !willOpen;
+  trigger.setAttribute("aria-expanded", String(willOpen));
+}
+
+function setupAuth() {
+  const loginForm = document.querySelector("#loginForm");
+  const registerForm = document.querySelector("#registerForm");
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(loginForm);
+      const correo = formData.get("correo").toString().trim().toLowerCase();
+      const password = formData.get("password").toString();
+      const message = document.querySelector("#loginMessage");
+
+      const user = getUsers().find((entry) => entry.correo === correo && entry.password === password);
+
+      if (!user) {
+        if (message) message.textContent = "Correo o contrasena incorrectos.";
+        return;
+      }
+
+      setSession({ nombre: user.nombre, correo: user.correo });
+      renderAccountWidget();
+      loginForm.reset();
+      if (message) message.textContent = "";
+      closeModals();
+      resolvePendingCartAction();
+    });
+  }
+
+  if (registerForm) {
+    registerForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const formData = new FormData(registerForm);
+      const nombre = formData.get("nombre").toString().trim();
+      const correo = formData.get("correo").toString().trim().toLowerCase();
+      const password = formData.get("password").toString();
+      const message = document.querySelector("#registerMessage");
+
+      const users = getUsers();
+      if (users.some((entry) => entry.correo === correo)) {
+        if (message) message.textContent = "Ya existe una cuenta con ese correo.";
+        return;
+      }
+
+      users.push({ nombre, correo, password });
+      setUsers(users);
+      setSession({ nombre, correo });
+      renderAccountWidget();
+      registerForm.reset();
+      if (message) message.textContent = "";
+      closeModals();
+      resolvePendingCartAction();
+    });
+  }
+}
+
+function resolvePendingCartAction() {
+  if (!pendingCartAction) return;
+  addToCart(pendingCartAction.productId, pendingCartAction.quantity);
+  pendingCartAction = null;
+}
+
 /* ---------- Utilidades varias ---------- */
 
 function getSelectedQuantity(addButton) {
@@ -463,6 +695,10 @@ document.addEventListener("click", (event) => {
   const removeButton = event.target.closest("[data-remove-cart]");
   const closeButton = event.target.closest("[data-close-modal]");
   const finalizeButton = event.target.closest("#btnFinalizarPedido");
+  const accountTrigger = event.target.closest("#accountTrigger");
+  const authTab = event.target.closest("[data-auth-tab]");
+  const logoutButton = event.target.closest("#logoutBtn");
+  const accountWidget = event.target.closest("#accountWidget");
 
   if (openButton) {
     openProductModal(Number(openButton.dataset.openProduct));
@@ -470,11 +706,18 @@ document.addEventListener("click", (event) => {
 
   if (addButton) {
     const quantity = getSelectedQuantity(addButton);
-    addToCart(Number(addButton.dataset.addCart), quantity);
-    addButton.textContent = "Agregado";
-    setTimeout(() => {
-      addButton.textContent = "Agregar al carrito";
-    }, 900);
+    const productId = Number(addButton.dataset.addCart);
+
+    if (!getSession()) {
+      pendingCartAction = { productId, quantity };
+      openAuthModal("login", "Inicia sesion para agregar productos al carrito.");
+    } else {
+      addToCart(productId, quantity);
+      addButton.textContent = "Agregado";
+      setTimeout(() => {
+        addButton.textContent = "Agregar al carrito";
+      }, 900);
+    }
   }
 
   if (removeButton) {
@@ -499,7 +742,30 @@ document.addEventListener("click", (event) => {
   }
 
   if (closeButton || event.target.classList.contains("modal")) {
+    pendingCartAction = null;
     closeModals();
+  }
+
+  if (accountTrigger) {
+    if (getSession()) {
+      toggleAccountMenu();
+    } else {
+      pendingCartAction = null;
+      openAuthModal("login");
+    }
+  }
+
+  if (authTab) {
+    switchAuthTab(authTab.dataset.authTab);
+  }
+
+  if (logoutButton) {
+    setSession(null);
+    renderAccountWidget();
+  }
+
+  if (!accountWidget) {
+    closeAccountMenu();
   }
 });
 
@@ -513,19 +779,24 @@ document.addEventListener("change", (event) => {
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeModals();
+    closeAccountMenu();
   }
 });
 
 /* ---------- Inicializacion ---------- */
 
+injectAccountUI();
 setupNavigation();
 setupReservation();
 setupMenuSearch();
 setupCheckout();
+setupAuth();
 renderProducts("#contenedor-menu", menu);
 renderProducts("#favoritos-lista", menu.filter((product) => product.favorito));
+renderProducts("#destacados-lista", menu.filter((product) => product.favorito));
 renderDetailPage();
 renderCart();
 renderOrders();
+renderAccountWidget();
 updateCartCount();
 updateOrdersCount();

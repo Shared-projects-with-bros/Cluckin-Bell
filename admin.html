@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Cluckin Bell | Panel administrativo</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-page="admin">
+  <header class="site-header">
+    <nav class="navbar" aria-label="Navegacion administrativa">
+      <a class="brand" href="admin.html">
+        <img src="img/Cluckin bell.png" alt="Logo de Cluckin Bell">
+        <span>Cluckin Bell · Admin</span>
+      </a>
+      <div class="account-widget" id="adminAccountWidget">
+        <button class="account-trigger" id="adminLogoutBtn" type="button" hidden>Cerrar sesion</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="page-shell">
+    <section class="section page-title">
+      <p class="eyebrow">Panel interno</p>
+      <h1>Gestion de pedidos</h1>
+      <p>Acceso solo para el equipo del restaurante. Aqui se actualiza el estado de los pedidos que llegan desde el sitio.</p>
+    </section>
+
+    <section class="section section-tight" id="adminLoginSection">
+      <form class="reservation-form" id="adminLoginForm">
+        <label class="full-field">Correo<input type="email" name="correo" placeholder="admin@cluckinbell.local" required></label>
+        <label class="full-field">Contrasena<input type="password" name="password" required></label>
+        <button class="btn primary full-field" type="submit">Entrar</button>
+        <p class="form-message" id="adminLoginMessage" role="status" aria-live="polite"></p>
+      </form>
+    </section>
+
+    <section class="section section-tight" id="adminOrdersSection" hidden>
+      <div id="admin-pedidos-lista" class="orders-grid"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <strong>Cluckin Bell</strong>
+    <span>Panel interno, no forma parte del sitio publico.</span>
+  </footer>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>
