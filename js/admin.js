@@ -1,11 +1,13 @@
 /*
  * Panel interno para HU10 (Gestionar pedidos recibidos).
- * No hay backend, asi que el acceso de administrador es una credencial fija
- * revisada aqui mismo. Cualquiera que vea el codigo fuente puede encontrarla:
- * esto alcanza para una demo/entrega academica, no para produccion real.
+ * No hay backend de autenticacion admin, asi que el acceso es una credencial
+ * fija revisada aqui mismo. Cualquiera que vea el codigo fuente puede
+ * encontrarla: esto alcanza para una demo/entrega academica, no para
+ * produccion real.
  */
 
-const ORDERS_KEY = "cluckinOrders";
+const API_BASE = "http://localhost:3000/api";
+
 const ADMIN_SESSION_KEY = "cluckinAdminSession";
 const ADMIN_CREDENTIALS = { correo: "admin@cluckinbell.local", password: "cluckinbell2026" };
 const ORDER_STATUSES = ["Pendiente", "En preparacion", "En camino", "Entregado", "Cancelado"];
@@ -15,8 +17,21 @@ const money = new Intl.NumberFormat("en-US", {
   currency: "USD"
 });
 
-const getOrders = () => JSON.parse(localStorage.getItem(ORDERS_KEY)) || [];
-const setOrders = (orders) => localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+async function getOrders() {
+  const response = await fetch(`${API_BASE}/pedidos`);
+  if (!response.ok) throw new Error("No se pudieron obtener los pedidos");
+  return response.json();
+}
+
+async function updateOrderStatus(codigo, estado) {
+  const response = await fetch(`${API_BASE}/pedidos/${codigo}/estado`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ estado })
+  });
+  if (!response.ok) throw new Error("No se pudo actualizar el estado del pedido");
+  return response.json();
+}
 
 const isAdminLoggedIn = () => sessionStorage.getItem(ADMIN_SESSION_KEY) === "true";
 const setAdminSession = (value) => {
@@ -32,7 +47,7 @@ function orderCard(order) {
     .map((item) => `<li>${item.cantidad} x ${item.nombre} - ${money.format(item.precio * item.cantidad)}</li>`)
     .join("");
 
-  const fecha = new Date(order.fecha).toLocaleString("es-CR", {
+  const fecha = new Date(order.createdAt).toLocaleString("es-CR", {
     dateStyle: "medium",
     timeStyle: "short"
   });
@@ -57,18 +72,23 @@ function orderCard(order) {
   `;
 }
 
-function renderAdminOrders() {
+async function renderAdminOrders() {
   const container = document.querySelector("#admin-pedidos-lista");
   if (!container) return;
 
-  const orders = getOrders();
+  try {
+    const orders = await getOrders();
 
-  if (orders.length === 0) {
-    container.innerHTML = `<p class="empty-state">Todavia no han llegado pedidos.</p>`;
-    return;
+    if (orders.length === 0) {
+      container.innerHTML = `<p class="empty-state">Todavia no han llegado pedidos.</p>`;
+      return;
+    }
+
+    container.innerHTML = orders.map(orderCard).join("");
+  } catch (error) {
+    console.error(error);
+    container.innerHTML = `<p class="empty-state">No se pudieron cargar los pedidos. Verifica que el servidor este corriendo.</p>`;
   }
-
-  container.innerHTML = orders.map(orderCard).join("");
 }
 
 function showAdminPanel() {
@@ -106,16 +126,15 @@ document.querySelector("#adminLogoutBtn").addEventListener("click", () => {
   showAdminLogin();
 });
 
-document.addEventListener("change", (event) => {
+document.addEventListener("change", async (event) => {
   const select = event.target.closest("[data-order-status]");
   if (!select) return;
 
-  const orders = getOrders();
-  const order = orders.find((entry) => entry.codigo === select.dataset.orderStatus);
-  if (!order) return;
-
-  order.estado = select.value;
-  setOrders(orders);
+  try {
+    await updateOrderStatus(select.dataset.orderStatus, select.value);
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 if (isAdminLoggedIn()) {
